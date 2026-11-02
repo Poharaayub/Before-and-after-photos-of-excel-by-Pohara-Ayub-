@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Before After Report Excel/ PDF By Pohara Ayub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Library ExcelJS & FileSaver untuk export Excel dengan gambar -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @page {
+      size: landscape;
+      margin: 8mm;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { 
+        background: white !important; 
+        font-size: 11pt; 
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      main {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .page-break-item {
+        page-break-after: always !important;
+        break-after: page !important;
+        box-shadow: none !important;
+        border: 1px solid #d1d5db !important;
+        margin-bottom: 0 !important;
+        min-height: 98vh !important;
+      }
+      /* Ensure proper styling for inputs during print */
+      input {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        padding: 0 !important;
+      }
+    }
+    .page-break-item {
+      page-break-after: always;
+      break-after: page;
+    }
+    /* Style visual indikator saat dragging image */
+    .drag-over {
+      border-color: #2563eb !important;
+      background-color: #eff6ff !important;
+      transform: scale(1.01);
+      transition: all 0.2s ease;
+    }
+    .dragging {
+      opacity: 0.4;
+      cursor: grabbing !important;
+    }
+    /* Touch drag ghost styling for mobile */
+    .touch-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.8;
+      transform: translate(-50%, -50%) scale(0.9);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+    }
+    /* Prevent smooth scrolling/overscroll while dragging on touch */
+    .touch-dragging-active {
+      touch-action: none !important;
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 flex flex-col font-sans">
+
+  <!-- Header / Navbar -->
+  <header class="bg-blue-700 text-white shadow-md no-print sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-clipboard-check text-2xl text-yellow-300"></i>
+        <div>
+          <h1 class="text-lg font-bold tracking-wide">Before After Report Excel/ PDF By Pohara Ayub</h1>
+          <p class="text-xs text-blue-200">Foto Before, Foto Action (Opsional) & Foto After</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="exportToExcel()" id="btn-excel" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-excel text-sm"></i> Download Excel
+        </button>
+        <button onclick="exportToPDF()" id="btn-pdf" class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-pdf text-sm"></i> Download PDF
+        </button>
+        <button onclick="triggerPrint()" class="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-print"></i> Cetak
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 space-y-4">
+
+    <!-- Form Metadata Laporan -->
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 no-print">
+      <h2 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2 border-b pb-1.5">
+        <i class="fa-solid fa-circle-info text-blue-600"></i> Info Laporan
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <div>
+          <label class="block font-semibold text-gray-600 uppercase mb-1">Judul Laporan</label>
+          <input type="text" id="rep-title" value="" placeholder="Masukkan judul laporan" class="w-full border rounded-lg p-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" oninput="updateHeader()">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-600 uppercase mb-1">Pembuat Laporan</label>
+          <input type="text" id="rep-author" value="" placeholder="Nama / Jabatan" class="w-full border rounded-lg p-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" oninput="updateHeader()">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-600 uppercase mb-1">Tanggal Temuan</label>
+          <input type="date" id="rep-date" class="w-full border rounded-lg p-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" onchange="updateHeader()">
+        </div>
+        <div>
+          <label class="block font-semibold text-gray-600 uppercase mb-1">Area</label>
+          <input type="text" id="rep-area" value="" placeholder="Masukkan area" class="w-full border rounded-lg p-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" oninput="updateHeader()">
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Upload Massal Foto & Kontrol Item -->
+    <div id="batch-drop-zone" 
+         data-dropzone="batch"
+         ondragover="handleDragOver(event)" 
+         ondragleave="handleDragLeave(event)" 
+         ondrop="handleBatchDrop(event)" 
+         class="drop-target-zone bg-gradient-to-r from-blue-50 via-indigo-50 to-orange-50 p-4 rounded-xl border-2 border-dashed border-blue-300 no-print flex flex-col sm:flex-row justify-between items-center gap-3 shadow-xs transition-all">
+      <div>
+        <h3 class="text-xs font-bold text-blue-900 uppercase flex items-center gap-1.5">
+          <i class="fa-solid fa-images text-blue-600"></i> Upload Foto Berurutan (Auto Pair Before-Action-After)
+        </h3>
+        <p class="text-[11px] text-blue-700 mt-0.5">Pilih banyak foto sekaligus. Urutan foto akan otomatis disebar ke slot Before, Action (jika ada), dan After secara sistematis.</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <label class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow cursor-pointer flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-list-ol text-sm"></i> Upload Berurutan Pair (2-2)
+          <input type="file" accept="image/*" multiple onchange="handleSequentialPairUpload(event)" class="hidden">
+        </label>
+        <label class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow cursor-pointer flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-circle-plus text-sm"></i> Upload Semua Ke Before
+          <input type="file" accept="image/*" multiple onchange="handleBatchBeforeUpload(event)" class="hidden">
+        </label>
+        <button onclick="addItem()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-plus text-sm"></i> + Kerjaan Kosong
+        </button>
+      </div>
+    </div>
+
+    <!-- Tombol Tambah Temuan Header List -->
+    <div class="flex justify-between items-center no-print pt-2">
+      <h2 class="text-base font-bold text-gray-800">Daftar Temuan Pekerjaan (1 Pasang/Halaman)</h2>
+    </div>
+
+    <!-- Area Konten Laporan -->
+    <div id="report-content" class="space-y-6">
+      <!-- Container Item List -->
+      <div id="items-container" class="space-y-6">
+        <!-- Template Item akan disisipkan via JavaScript -->
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let itemCount = 0;
+    
+    /* Touch Drag State Variable for Mobile Devices */
+    let touchDragData = null;
+    let touchGhostEl = null;
+    let activeDropTarget = null;
+
+    function getFormattedDateString() {
+      const dateInput = document.getElementById('rep-date')?.value;
+      if (!dateInput) return '-';
+      
+      const dateObj = new Date(dateInput + 'T00:00:00');
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+      const dayName = days[dateObj.getDay()];
+      const dayNum = dateObj.getDate();
+      const monthName = months[dateObj.getMonth()];
+      const year = dateObj.getFullYear();
+
+      return `${dayName}, ${dayNum} ${monthName} ${year}`;
+    }
+
+    function syncInputsForPrint() {
+      // Sync input values to value attributes so they render properly in print & html2canvas
+      document.querySelectorAll('input').forEach(input => {
+        input.setAttribute('value', input.value);
+      });
+    }
+
+    function triggerPrint() {
+      syncInputsForPrint();
+      window.print();
+    }
+
+    function updateHeader() {
+      const titleVal = document.getElementById('rep-title').value || '-';
+      const periodVal = getFormattedDateString();
+      const areaVal = 'Area: ' + (document.getElementById('rep-area').value || '-');
+      const authorVal = document.getElementById('rep-author').value || '-';
+
+      document.querySelectorAll('.disp-title-cls').forEach(el => el.innerText = titleVal);
+      document.querySelectorAll('.disp-period-cls').forEach(el => el.innerText = periodVal);
+      document.querySelectorAll('.disp-area-cls').forEach(el => el.innerText = areaVal);
+      document.querySelectorAll('.disp-author-cls').forEach(el => el.innerText = authorVal);
+    }
+
+    // Helper untuk membaca banyak file secara sequential dengan Promise
+    function readFilesSequentially(files) {
+      return Promise.all(files.map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      }));
+    }
+
+    /* Upload Foto Berurutan: Foto 1 -> Before, Foto 2 -> After, dst. */
+    async function handleSequentialPairUpload(event) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+
+      const fileDataUrls = await readFilesSequentially(files);
+
+      let currentItemId = null;
+      for (let i = 0; i < fileDataUrls.length; i++) {
+        if (i % 2 === 0) {
+          currentItemId = addItem('', '');
+          appendImageToGrid(fileDataUrls[i], 'before', currentItemId);
+        } else {
+          appendImageToGrid(fileDataUrls[i], 'after', currentItemId);
+        }
+      }
+
+      event.target.value = '';
+    }
+
+    /* Multiple Image Upload ke Slot (Before -> Action -> After secara berurutan) */
+    async function handleMultipleImagesSequential(event, targetType, currentItemId) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+
+      const fileDataUrls = await readFilesSequentially(files);
+      const slotSequence = ['before', 'action', 'after'];
+      let startIdx = slotSequence.indexOf(targetType);
+
+      let activeItemId = currentItemId;
+
+      for (let i = 0; i < fileDataUrls.length; i++) {
+        const slotIdx = (startIdx + i) % 3;
+        const currentSlot = slotSequence[slotIdx];
+
+        if (i > 0 && currentSlot === 'before') {
+          activeItemId = addItem('', '');
+        }
+
+        appendImageToGrid(fileDataUrls[i], currentSlot, activeItemId);
+      }
+
+      event.target.value = '';
+    }
+
+    function handleBatchBeforeUpload(event) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+
+      readFilesSequentially(files).then(dataUrls => {
+        dataUrls.forEach((src) => {
+          const newItemId = addItem('', '');
+          appendImageToGrid(src, 'before', newItemId);
+        });
+      });
+
+      event.target.value = '';
+    }
+
+    function addItem(location = '', finding = '') {
+      itemCount++;
+      const id = itemCount;
+      const container = document.getElementById('items-container');
+
+      const card = document.createElement('div');
+      card.id = `item-card-${id}`;
+      card.className = "item-page bg-white p-6 rounded-xl shadow-md border border-gray-200 page-break-item mb-6 flex flex-col justify-between min-h-[620px]";
+
+      const titleVal = document.getElementById('rep-title').value || '-';
+      const periodVal = getFormattedDateString();
+      const areaVal = 'Area: ' + (document.getElementById('rep-area').value || '-');
+      const authorVal = document.getElementById('rep-author').value || '-';
+
+      card.innerHTML = `
+        <!-- KOP Header Per Halaman -->
+        <div>
+          <div class="border-b-2 border-gray-800 pb-2 mb-3 flex justify-between items-end">
+            <div>
+              <h1 class="disp-title-cls text-xl font-black text-gray-900 tracking-tight">${titleVal}</h1>
+              <p class="disp-area-cls text-xs font-bold text-blue-700 mt-0.5">${areaVal}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1 text-[11px] text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+              <p><span class="font-bold text-gray-500">TANGGAL:</span> <span class="disp-period-cls font-bold text-gray-900">${periodVal}</span></p>
+              <p><span class="font-bold text-gray-500">PEMBUAT:</span> <span class="disp-author-cls font-bold text-gray-900">${authorVal}</span></p>
+            </div>
+          </div>
+
+          <!-- Baris Kontrol Top Item -->
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="bg-blue-600 text-white text-xs font-bold px-3 py-0.5 rounded-md">ITEM #${id}</span>
+            </div>
+            <button onclick="removeItem(${id})" class="no-print text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1 transition">
+              <i class="fa-solid fa-trash"></i> Hapus Item
+            </button>
+          </div>
+
+          <!-- Form Info Temuan Horisontal -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-xs">
+            <div class="md:col-span-4">
+              <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Lokasi / Line</label>
+              <input type="text" id="loc-${id}" value="${location}" placeholder="Contoh: Line 1 Produksi" class="w-full border rounded-md p-1.5 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500" oninput="this.setAttribute('value', this.value)">
+            </div>
+            <div class="md:col-span-8">
+              <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Detail Temuan</label>
+              <input type="text" id="find-${id}" value="${finding}" placeholder="Detail Temuan" class="w-full border rounded-md p-1.5 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500" oninput="this.setAttribute('value', this.value)">
+            </div>
+          </div>
+
+          <!-- Foto Before, Action, & After Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- BEFORE PHOTO CARD -->
+            <div id="drop-zone-before-${id}"
+                 data-dropzone="before"
+                 data-item-id="${id}"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleCardDrop(event, 'before', ${id})"
+                 class="drop-target-zone bg-red-50/20 p-3 rounded-xl border-2 border-dashed border-red-200 flex flex-col justify-between transition-all">
+              <div>
+                <p class="text-xs font-bold text-red-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-red-100/70 py-1 rounded-md">
+                  <i class="fa-solid fa-triangle-exclamation"></i> BEFORE (SEBELUM)
+                </p>
+                <div id="grid-before-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-red-200 rounded-lg p-2 bg-white">
+                  <p id="placeholder-before-${id}" class="text-xs text-gray-400 italic text-center">Belum ada foto</p>
+                </div>
+              </div>
+              
+              <label class="relative border border-dashed border-red-300 hover:border-red-500 bg-red-50/50 hover:bg-red-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
+                <i class="fa-solid fa-cloud-arrow-up text-red-500 text-xs"></i>
+                <span class="text-xs font-bold text-red-700">+ Foto Before</span>
+                <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'before', ${id})" class="hidden">
+              </label>
+            </div>
+
+            <!-- ACTION PHOTO CARD (OPSIONAL) -->
+            <div id="drop-zone-action-${id}"
+                 data-dropzone="action"
+                 data-item-id="${id}"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleCardDrop(event, 'action', ${id})"
+                 class="drop-target-zone bg-amber-50/20 p-3 rounded-xl border-2 border-dashed border-amber-200 flex flex-col justify-between transition-all">
+              <div>
+                <p class="text-xs font-bold text-amber-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-amber-100/70 py-1 rounded-md">
+                  <i class="fa-solid fa-gears"></i> ACTION / PROSES (OPSIONAL)
+                </p>
+                <div id="grid-action-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-amber-200 rounded-lg p-2 bg-white">
+                  <p id="placeholder-action-${id}" class="text-xs text-gray-400 italic text-center">Opsional foto proses</p>
+                </div>
+              </div>
+
+              <label class="relative border border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
+                <i class="fa-solid fa-cloud-arrow-up text-amber-600 text-xs"></i>
+                <span class="text-xs font-bold text-amber-700">+ Foto Action</span>
+                <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'action', ${id})" class="hidden">
+              </label>
+            </div>
+
+            <!-- AFTER PHOTO CARD -->
+            <div id="drop-zone-after-${id}"
+                 data-dropzone="after"
+                 data-item-id="${id}"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleCardDrop(event, 'after', ${id})"
+                 class="drop-target-zone bg-green-50/20 p-3 rounded-xl border-2 border-dashed border-green-200 flex flex-col justify-between transition-all">
+              <div>
+                <p class="text-xs font-bold text-green-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-green-100/70 py-1 rounded-md">
+                  <i class="fa-solid fa-circle-check"></i> AFTER (SESUDAH)
+                </p>
+                <div id="grid-after-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-green-200 rounded-lg p-2 bg-white">
+                  <p id="placeholder-after-${id}" class="text-xs text-gray-400 italic text-center">Belum ada foto</p>
+                </div>
+              </div>
+
+              <label class="relative border border-dashed border-green-300 hover:border-green-500 bg-green-50/50 hover:bg-green-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
+                <i class="fa-solid fa-cloud-arrow-up text-green-500 text-xs"></i>
+                <span class="text-xs font-bold text-green-700">+ Foto After</span>
+                <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'after', ${id})" class="hidden">
+              </label>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+      return id;
+    }
+
+    function removeItem(id) {
+      const card = document.getElementById(`item-card-${id}`);
+      if (card) card.remove();
+    }
+
+    function appendImageToGrid(imgSrc, type, itemId) {
+      const grid = document.getElementById(`grid-${type}-${itemId}`);
+      if (!grid) return;
+      const placeholder = document.getElementById(`placeholder-${type}-${itemId}`);
+      if (placeholder) placeholder.style.display = 'none';
+
+      const imgId = 'img-' + Math.random().toString(36).substr(2, 9);
+      const imgWrapper = document.createElement('div');
+      imgWrapper.id = imgId;
+      imgWrapper.draggable = true;
+      imgWrapper.setAttribute('data-type', type);
+      imgWrapper.setAttribute('data-item-id', itemId);
+      imgWrapper.className = "img-wrapper relative group h-full w-full bg-gray-50 rounded-lg border overflow-hidden shadow-xs flex items-center justify-center p-1 border-gray-200 cursor-grab active:cursor-grabbing touch-none";
+
+      /* Standard Desktop HTML5 Drag Event Listeners */
+      imgWrapper.ondragstart = function(e) {
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+          imgId: imgId,
+          srcType: type,
+          srcItemId: itemId
+        }));
+        imgWrapper.classList.add('dragging');
+      };
+
+      imgWrapper.ondragend = function() {
+        imgWrapper.classList.remove('dragging');
+      };
+
+      /* Mobile Touch Event Handlers for Dragging */
+      imgWrapper.ontouchstart = function(e) {
+        if (e.target.closest('button')) return;
+
+        const touch = e.touches[0];
+        touchDragData = {
+          imgId: imgId,
+          srcType: type,
+          srcItemId: itemId,
+          imgSrc: imgSrc,
+          startX: touch.clientX,
+          startY: touch.clientY
+        };
+
+        touchGhostEl = document.createElement('div');
+        touchGhostEl.className = 'touch-ghost w-24 h-24 bg-white p-1 shadow-2xl';
+        touchGhostEl.innerHTML = `<img src="${imgSrc}" class="w-full h-full object-contain rounded">`;
+        document.body.appendChild(touchGhostEl);
+        
+        moveGhost(touch.clientX, touch.clientY);
+        imgWrapper.classList.add('dragging');
+        document.body.classList.add('touch-dragging-active');
+      };
+
+      imgWrapper.ontouchmove = function(e) {
+        if (!touchDragData || !touchGhostEl) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        moveGhost(touch.clientX, touch.clientY);
+
+        const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetZone = elementUnderTouch ? elementUnderTouch.closest('.drop-target-zone') : null;
+
+        if (activeDropTarget && activeDropTarget !== targetZone) {
+          activeDropTarget.classList.remove('drag-over');
+        }
+        
+        if (targetZone) {
+          targetZone.classList.add('drag-over');
+          activeDropTarget = targetZone;
+        } else {
+          activeDropTarget = null;
+        }
+      };
+
+      imgWrapper.ontouchend = function(e) {
+        if (!touchDragData) return;
+
+        if (touchGhostEl) {
+          touchGhostEl.remove();
+          touchGhostEl = null;
+        }
+
+        if (activeDropTarget) {
+          activeDropTarget.classList.remove('drag-over');
+          const targetType = activeDropTarget.getAttribute('data-dropzone');
+
+          if (targetType === 'batch') {
+            const newItemId = addItem('', '');
+            appendImageToGrid(touchDragData.imgSrc, 'before', newItemId);
+            imgWrapper.remove();
+            updateGridCols(touchDragData.srcType, touchDragData.srcItemId);
+          } else {
+            const targetItemId = activeDropTarget.getAttribute('data-item-id');
+            appendImageToGrid(touchDragData.imgSrc, targetType, targetItemId);
+            imgWrapper.remove();
+            updateGridCols(touchDragData.srcType, touchDragData.srcItemId);
+          }
+          activeDropTarget = null;
+        }
+
+        imgWrapper.classList.remove('dragging');
+        document.body.classList.remove('touch-dragging-active');
+        touchDragData = null;
+      };
+
+      imgWrapper.ontouchcancel = function() {
+        if (touchGhostEl) touchGhostEl.remove();
+        if (activeDropTarget) activeDropTarget.classList.remove('drag-over');
+        imgWrapper.classList.remove('dragging');
+        document.body.classList.remove('touch-dragging-active');
+        touchDragData = null;
+        touchGhostEl = null;
+        activeDropTarget = null;
+      };
+
+      imgWrapper.innerHTML = `
+        <img src="${imgSrc}" class="max-w-full max-h-full object-contain rounded pointer-events-none">
+        <button onclick="removeImage('${imgId}', '${type}', ${itemId})" type="button" class="no-print absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow opacity-80 group-hover:opacity-100 transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      `;
+      grid.appendChild(imgWrapper);
+      updateGridCols(type, itemId);
+    }
+
+    function moveGhost(x, y) {
+      if (touchGhostEl) {
+        touchGhostEl.style.left = `${x}px`;
+        touchGhostEl.style.top = `${y}px`;
+      }
+    }
+
+    function updateGridCols(type, itemId) {
+      const grid = document.getElementById(`grid-${type}-${itemId}`);
+      if (!grid) return;
+      const remaining = grid.querySelectorAll('.img-wrapper').length;
+      const placeholder = document.getElementById(`placeholder-${type}-${itemId}`);
+
+      if (remaining === 0) {
+        if (placeholder) placeholder.style.display = 'block';
+        grid.className = "grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+      } else if (remaining === 1) {
+        grid.className = "grid grid-cols-1 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+      } else if (remaining === 2) {
+        grid.className = "grid grid-cols-2 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+      } else {
+        grid.className = "grid grid-cols-2 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+      }
+    }
+
+    function removeImage(imgId, type, itemId) {
+      const imgEl = document.getElementById(imgId);
+      if (imgEl) imgEl.remove();
+      updateGridCols(type, itemId);
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleBatchDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+
+      const rawData = e.dataTransfer.getData('text/plain');
+      if (rawData) {
+        try {
+          const data = JSON.parse(rawData);
+          const imgEl = document.getElementById(data.imgId);
+          if (imgEl) {
+            const imgSrc = imgEl.querySelector('img').src;
+            const newItemId = addItem('', '');
+            appendImageToGrid(imgSrc, 'before', newItemId);
+            imgEl.remove();
+            updateGridCols(data.srcType, data.srcItemId);
+            return;
+          }
+        } catch (err) {}
+      }
+
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+
+      readFilesSequentially(files).then(dataUrls => {
+        let currentItemId = null;
+        for (let i = 0; i < dataUrls.length; i++) {
+          if (i % 2 === 0) {
+            currentItemId = addItem('', '');
+            appendImageToGrid(dataUrls[i], 'before', currentItemId);
+          } else {
+            appendImageToGrid(dataUrls[i], 'after', currentItemId);
+          }
+        }
+      });
+    }
+
+    function handleCardDrop(e, targetType, targetItemId) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+
+      const rawData = e.dataTransfer.getData('text/plain');
+      if (rawData) {
+        try {
+          const data = JSON.parse(rawData);
+          const imgEl = document.getElementById(data.imgId);
+          if (imgEl) {
+            const imgSrc = imgEl.querySelector('img').src;
+            appendImageToGrid(imgSrc, targetType, targetItemId);
+            imgEl.remove();
+            updateGridCols(data.srcType, data.srcItemId);
+            return;
+          }
+        } catch (err) {}
+      }
+
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+
+      readFilesSequentially(files).then(dataUrls => {
+        const slotSequence = ['before', 'action', 'after'];
+        let startIdx = slotSequence.indexOf(targetType);
+        let activeItemId = targetItemId;
+
+        for (let i = 0; i < dataUrls.length; i++) {
+          const slotIdx = (startIdx + i) % 3;
+          const currentSlot = slotSequence[slotIdx];
+
+          if (i > 0 && currentSlot === 'before') {
+            activeItemId = addItem('', '');
+          }
+
+          appendImageToGrid(dataUrls[i], currentSlot, activeItemId);
+        }
+      });
+    }
+
+    window.onload = function() {
+      addItem('', '');
+    };
+
+    async function exportToPDF() {
+      syncInputsForPrint();
+      const btnPdf = document.getElementById('btn-pdf');
+      btnPdf.disabled = true;
+      btnPdf.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Memproses PDF...`;
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('l', 'mm', 'a4');
+        const itemPages = document.querySelectorAll('.item-page');
+
+        for (let i = 0; i < itemPages.length; i++) {
+          const itemEl = itemPages[i];
+
+          const canvas = await html2canvas(itemEl, {
+            scale: 1.5,
+            useCORS: true,
+            logging: false
+          });
+
+          const imgData = canvas.toDataURL('image/jpeg', 0.8);
+          const pdfWidth = 297;
+          const pdfHeight = 210;
+
+          if (i > 0) {
+            pdf.addPage();
+          }
+
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+        }
+
+        const titleVal = document.getElementById('rep-title').value || 'Before_After_Report';
+        const fileName = titleVal.replace(/\s+/g, '_') + '.pdf';
+        pdf.save(fileName);
+      } catch (err) {
+        alert('Gagal mengekspor PDF: ' + err.message);
+      } finally {
+        btnPdf.disabled = false;
+        btnPdf.innerHTML = `<i class="fa-solid fa-file-pdf text-sm"></i> Download PDF`;
+      }
+    }
+
+    async function exportToExcel() {
+      const btnExcel = document.getElementById('btn-excel');
+      btnExcel.disabled = true;
+      btnExcel.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Memproses Excel...`;
+
+      try {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Before After Report');
+
+        const titleVal = (document.getElementById('rep-title').value || 'Before After Report').toUpperCase();
+        const periodVal = getFormattedDateString();
+        const areaVal = document.getElementById('rep-area').value || '-';
+        const authorVal = document.getElementById('rep-author').value || '-';
+
+        worksheet.mergeCells('A1:F1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = titleVal;
+        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E40AF' } };
+        titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.getRow(1).height = 30;
+
+        worksheet.mergeCells('A2:F2');
+        worksheet.getCell('A2').value = `Tanggal: ${periodVal} | Area: ${areaVal} | Pembuat: ${authorVal}`;
+        worksheet.getCell('A2').font = { name: 'Arial', size: 10, italic: true };
+        worksheet.getCell('A2').alignment = { vertical: 'middle', horizontal: 'center' };
+        worksheet.getRow(2).height = 20;
+
+        // Header termasuk Foto Action
+        const headers = ['No', 'Lokasi / Line', 'Detail Temuan', 'Foto Before', 'Foto Action (Opsional)', 'Foto After'];
+        const headerRow = worksheet.getRow(4);
+        headerRow.values = headers;
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F2937' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+
+        worksheet.getColumn(1).width = 6;   // No
+        worksheet.getColumn(2).width = 22;  // Lokasi / Line
+        worksheet.getColumn(3).width = 28;  // Detail Temuan
+        worksheet.getColumn(4).width = 32;  // Foto Before
+        worksheet.getColumn(5).width = 32;  // Foto Action
+        worksheet.getColumn(6).width = 32;  // Foto After
+
+        const itemCards = document.querySelectorAll('.item-page');
+        let currentRow = 5;
+
+        for (let i = 0; i < itemCards.length; i++) {
+          const card = itemCards[i];
+          const id = card.id.replace('item-card-', '');
+
+          const locVal = document.getElementById(`loc-${id}`)?.value || '-';
+          const findVal = document.getElementById(`find-${id}`)?.value || '-';
+
+          const beforeImgs = Array.from(card.querySelectorAll(`#grid-before-${id} img`));
+          const actionImgs = Array.from(card.querySelectorAll(`#grid-action-${id} img`));
+          const afterImgs = Array.from(card.querySelectorAll(`#grid-after-${id} img`));
+
+          const totalPhotos = Math.max(beforeImgs.length, actionImgs.length, afterImgs.length, 1);
+          const startRowForItem = currentRow;
+
+          for (let pIdx = 0; pIdx < totalPhotos; pIdx++) {
+            const row = worksheet.getRow(currentRow);
+            row.height = 140;
+
+            if (pIdx === 0) {
+              row.getCell(1).value = i + 1;
+              row.getCell(2).value = locVal;
+              row.getCell(3).value = findVal;
+            }
+
+            row.getCell(4).value = beforeImgs[pIdx] ? '' : (pIdx === 0 && beforeImgs.length === 0 ? '(Tidak Ada Foto)' : '');
+            row.getCell(5).value = actionImgs[pIdx] ? '' : (pIdx === 0 && actionImgs.length === 0 ? '-' : '');
+            row.getCell(6).value = afterImgs[pIdx] ? '' : (pIdx === 0 && afterImgs.length === 0 ? '(Tidak Ada Foto)' : '');
+
+            [1, 2, 3, 4, 5, 6].forEach(colIndex => {
+              const cell = row.getCell(colIndex);
+              cell.alignment = { 
+                vertical: 'middle', 
+                horizontal: (colIndex === 1 || colIndex >= 4) ? 'center' : 'left', 
+                wrapText: true 
+              };
+              cell.font = { name: 'Arial', size: 9 };
+              cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+              };
+            });
+
+            // Foto Before (Col 4 -> index 3.05)
+            if (beforeImgs[pIdx]) {
+              try {
+                const imageId = workbook.addImage({
+                  base64: beforeImgs[pIdx].src,
+                  extension: 'png',
+                });
+                worksheet.addImage(imageId, {
+                  tl: { col: 3.05, row: (currentRow - 1) + 0.05 },
+                  ext: { width: 220, height: 170 },
+                  editAs: 'oneCell'
+                });
+              } catch (e) {
+                console.error("Gagal menyisipkan foto Before:", e);
+              }
+            }
+
+            // Foto Action (Col 5 -> index 4.05)
+            if (actionImgs[pIdx]) {
+              try {
+                const imageId = workbook.addImage({
+                  base64: actionImgs[pIdx].src,
+                  extension: 'png',
+                });
+                worksheet.addImage(imageId, {
+                  tl: { col: 4.05, row: (currentRow - 1) + 0.05 },
+                  ext: { width: 220, height: 170 },
+                  editAs: 'oneCell'
+                });
+              } catch (e) {
+                console.error("Gagal menyisipkan foto Action:", e);
+              }
+            }
+
+            // Foto After (Col 6 -> index 5.05)
+            if (afterImgs[pIdx]) {
+              try {
+                const imageId = workbook.addImage({
+                  base64: afterImgs[pIdx].src,
+                  extension: 'png',
+                });
+                worksheet.addImage(imageId, {
+                  tl: { col: 5.05, row: (currentRow - 1) + 0.05 },
+                  ext: { width: 220, height: 170 },
+                  editAs: 'oneCell'
+                });
+              } catch (e) {
+                console.error("Gagal menyisipkan foto After:", e);
+              }
+            }
+
+            currentRow++;
+          }
+
+          if (totalPhotos > 1) {
+            const endRowForItem = currentRow - 1;
+            worksheet.mergeCells(`A${startRowForItem}:A${endRowForItem}`);
+            worksheet.mergeCells(`B${startRowForItem}:B${endRowForItem}`);
+            worksheet.mergeCells(`C${startRowForItem}:C${endRowForItem}`);
+          }
+        }
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const fileName = (document.getElementById('rep-title').value || 'Before_After_Report').replace(/\s+/g, '_') + '.xlsx';
+        saveAs(blob, fileName);
+
+      } catch (err) {
+        alert('Gagal mengekspor Excel: ' + err.message);
+      } finally {
+        btnExcel.disabled = false;
+        btnExcel.innerHTML = `<i class="fa-solid fa-file-excel text-sm"></i> Download Excel`;
+      }
+    }
+  </script>
+</body>
+</html>
