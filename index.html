@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Before After Report Excel/ PDF By Pohara Ayub</title>
+  <title>Before After Report Excel By Pohara Ayub</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <!-- Library ExcelJS & FileSaver untuk export Excel dengan gambar -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @page {
+    @page { 
       size: landscape;
       margin: 8mm;
     }
@@ -89,18 +87,15 @@
       <div class="flex items-center space-x-3">
         <i class="fa-solid fa-clipboard-check text-2xl text-yellow-300"></i>
         <div>
-          <h1 class="text-lg font-bold tracking-wide">Before After Report Excel/ PDF By Pohara Ayub</h1>
+          <h1 class="text-lg font-bold tracking-wide">Before After Report Excel By Pohara Ayub</h1>
           <p class="text-xs text-blue-200">Foto Before, Foto Action (Opsional) & Foto After</p>
         </div>
       </div>
       <div class="flex gap-2">
-        <button onclick="exportToExcel()" id="btn-excel" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+        <button onclick="exportToExcel()" id="btn-excel" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
           <i class="fa-solid fa-file-excel text-sm"></i> Download Excel
         </button>
-        <button onclick="exportToPDF()" id="btn-pdf" class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
-          <i class="fa-solid fa-file-pdf text-sm"></i> Download PDF
-        </button>
-        <button onclick="triggerPrint()" class="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center gap-1.5 transition">
+        <button onclick="triggerPrint()" class="bg-blue-800 hover:bg-blue-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow flex items-center gap-1.5 transition">
           <i class="fa-solid fa-print"></i> Cetak
         </button>
       </div>
@@ -186,6 +181,37 @@
     let touchGhostEl = null;
     let activeDropTarget = null;
 
+    /* Function Kompresi Foto tanpa mengurangi kualitas tampilan di Excel */
+    function compressImage(file, maxWidth = 1000, quality = 0.75) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataUrl);
+          };
+          img.onerror = () => resolve(event.target.result);
+        };
+      });
+    }
+
     function getFormattedDateString() {
       const dateInput = document.getElementById('rep-date')?.value;
       if (!dateInput) return '-';
@@ -203,7 +229,6 @@
     }
 
     function syncInputsForPrint() {
-      // Sync input values to value attributes so they render properly in print & html2canvas
       document.querySelectorAll('input').forEach(input => {
         input.setAttribute('value', input.value);
       });
@@ -226,15 +251,8 @@
       document.querySelectorAll('.disp-author-cls').forEach(el => el.innerText = authorVal);
     }
 
-    // Helper untuk membaca banyak file secara sequential dengan Promise
     function readFilesSequentially(files) {
-      return Promise.all(files.map(file => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      }));
+      return Promise.all(files.map(file => compressImage(file)));
     }
 
     /* Upload Foto Berurutan: Foto 1 -> Before, Foto 2 -> After, dst. */
@@ -335,19 +353,23 @@
           </div>
 
           <!-- Form Info Temuan Horisontal -->
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-2 mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-200 text-xs">
-            <div class="md:col-span-4">
-              <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Lokasi / Line</label>
-              <input type="text" id="loc-${id}" value="${location}" placeholder="Contoh: Line 1 Produksi" class="w-full border rounded-md p-1.5 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500" oninput="this.setAttribute('value', this.value)">
+          <div class="space-y-2 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs">
+            <div>
+              <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase">Lokasi / Line</label>
+              <input type="text" id="loc-${id}" value="${location}" placeholder="Contoh: Line 1" class="w-full border rounded-md p-2 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500 bg-white" oninput="this.setAttribute('value', this.value)">
             </div>
-            <div class="md:col-span-8">
-              <label class="block text-[10px] font-bold text-gray-500 mb-0.5 uppercase">Detail Temuan</label>
-              <input type="text" id="find-${id}" value="${finding}" placeholder="Detail Temuan" class="w-full border rounded-md p-1.5 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500" oninput="this.setAttribute('value', this.value)">
+            <div>
+              <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase">Detail Temuan</label>
+              <textarea id="find-${id}" placeholder="Deskripsi temuan/pekerjaan" rows="2" class="w-full border rounded-md p-2 font-bold text-gray-800 focus:ring-1 focus:ring-blue-500 bg-white resize-y" oninput="this.innerText = this.value">${finding}</textarea>
             </div>
+            <p class="text-[10px] text-gray-400 italic flex items-center gap-1">
+              <i class="fa-solid fa-expand text-[9px]"></i> Orientasi foto otomatis dipertahankan.
+            </p>
           </div>
 
-          <!-- Foto Before, Action, & After Grid -->
+          <!-- Layout Preview Foto 3 Kolom Berdampingan (BEFORE | ACTION | AFTER) -->
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
             <!-- BEFORE PHOTO CARD -->
             <div id="drop-zone-before-${id}"
                  data-dropzone="before"
@@ -355,19 +377,19 @@
                  ondragover="handleDragOver(event)"
                  ondragleave="handleDragLeave(event)"
                  ondrop="handleCardDrop(event, 'before', ${id})"
-                 class="drop-target-zone bg-red-50/20 p-3 rounded-xl border-2 border-dashed border-red-200 flex flex-col justify-between transition-all">
-              <div>
-                <p class="text-xs font-bold text-red-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-red-100/70 py-1 rounded-md">
-                  <i class="fa-solid fa-triangle-exclamation"></i> BEFORE (SEBELUM)
-                </p>
-                <div id="grid-before-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-red-200 rounded-lg p-2 bg-white">
-                  <p id="placeholder-before-${id}" class="text-xs text-gray-400 italic text-center">Belum ada foto</p>
-                </div>
-              </div>
+                 class="drop-target-zone bg-red-50/30 p-2.5 rounded-xl border border-dashed border-red-200 flex flex-col justify-between transition-all">
               
-              <label class="relative border border-dashed border-red-300 hover:border-red-500 bg-red-50/50 hover:bg-red-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
-                <i class="fa-solid fa-cloud-arrow-up text-red-500 text-xs"></i>
-                <span class="text-xs font-bold text-red-700">+ Foto Before</span>
+              <div class="bg-red-100/80 text-red-700 py-1.5 px-3 rounded-lg text-center font-bold text-xs uppercase flex items-center justify-center gap-1.5 mb-2">
+                <i class="fa-solid fa-triangle-exclamation"></i> BEFORE
+              </div>
+
+              <div id="grid-before-${id}" class="grid grid-cols-1 gap-2 min-h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white">
+                <p id="placeholder-before-${id}" class="text-xs text-slate-400 italic text-center">Belum ada foto</p>
+              </div>
+
+              <label class="relative border border-dashed border-red-300 hover:border-red-500 bg-white hover:bg-red-50 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2 shadow-xs text-xs font-bold text-red-600">
+                <i class="fa-solid fa-cloud-arrow-up text-red-500"></i>
+                <span>+ Foto Before</span>
                 <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'before', ${id})" class="hidden">
               </label>
             </div>
@@ -379,19 +401,19 @@
                  ondragover="handleDragOver(event)"
                  ondragleave="handleDragLeave(event)"
                  ondrop="handleCardDrop(event, 'action', ${id})"
-                 class="drop-target-zone bg-amber-50/20 p-3 rounded-xl border-2 border-dashed border-amber-200 flex flex-col justify-between transition-all">
-              <div>
-                <p class="text-xs font-bold text-amber-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-amber-100/70 py-1 rounded-md">
-                  <i class="fa-solid fa-gears"></i> ACTION / PROSES (OPSIONAL)
-                </p>
-                <div id="grid-action-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-amber-200 rounded-lg p-2 bg-white">
-                  <p id="placeholder-action-${id}" class="text-xs text-gray-400 italic text-center">Opsional foto proses</p>
-                </div>
+                 class="drop-target-zone bg-amber-50/30 p-2.5 rounded-xl border border-dashed border-amber-200 flex flex-col justify-between transition-all">
+              
+              <div class="bg-amber-100/80 text-amber-800 py-1.5 px-3 rounded-lg text-center font-bold text-xs uppercase flex items-center justify-center gap-1.5 mb-2">
+                <i class="fa-solid fa-gears"></i> ACTION (OPSIONAL)
               </div>
 
-              <label class="relative border border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
-                <i class="fa-solid fa-cloud-arrow-up text-amber-600 text-xs"></i>
-                <span class="text-xs font-bold text-amber-700">+ Foto Action</span>
+              <div id="grid-action-${id}" class="grid grid-cols-1 gap-2 min-h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white">
+                <p id="placeholder-action-${id}" class="text-xs text-slate-400 italic text-center">Foto proses (opsional)</p>
+              </div>
+
+              <label class="relative border border-dashed border-amber-300 hover:border-amber-500 bg-white hover:bg-amber-50 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2 shadow-xs text-xs font-bold text-amber-700">
+                <i class="fa-solid fa-cloud-arrow-up text-amber-600"></i>
+                <span>+ Foto Action</span>
                 <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'action', ${id})" class="hidden">
               </label>
             </div>
@@ -403,22 +425,23 @@
                  ondragover="handleDragOver(event)"
                  ondragleave="handleDragLeave(event)"
                  ondrop="handleCardDrop(event, 'after', ${id})"
-                 class="drop-target-zone bg-green-50/20 p-3 rounded-xl border-2 border-dashed border-green-200 flex flex-col justify-between transition-all">
-              <div>
-                <p class="text-xs font-bold text-green-600 uppercase mb-2 flex items-center justify-center gap-1.5 bg-green-100/70 py-1 rounded-md">
-                  <i class="fa-solid fa-circle-check"></i> AFTER (SESUDAH)
-                </p>
-                <div id="grid-after-${id}" class="grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-green-200 rounded-lg p-2 bg-white">
-                  <p id="placeholder-after-${id}" class="text-xs text-gray-400 italic text-center">Belum ada foto</p>
-                </div>
+                 class="drop-target-zone bg-green-50/30 p-2.5 rounded-xl border border-dashed border-green-200 flex flex-col justify-between transition-all">
+              
+              <div class="bg-green-100/80 text-green-800 py-1.5 px-3 rounded-lg text-center font-bold text-xs uppercase flex items-center justify-center gap-1.5 mb-2">
+                <i class="fa-solid fa-circle-check"></i> AFTER
               </div>
 
-              <label class="relative border border-dashed border-green-300 hover:border-green-500 bg-green-50/50 hover:bg-green-100 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2">
-                <i class="fa-solid fa-cloud-arrow-up text-green-500 text-xs"></i>
-                <span class="text-xs font-bold text-green-700">+ Foto After</span>
+              <div id="grid-after-${id}" class="grid grid-cols-1 gap-2 min-h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white">
+                <p id="placeholder-after-${id}" class="text-xs text-slate-400 italic text-center">Belum ada foto</p>
+              </div>
+
+              <label class="relative border border-dashed border-green-300 hover:border-green-500 bg-white hover:bg-green-50 p-2 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 transition no-print mt-2 shadow-xs text-xs font-bold text-green-700">
+                <i class="fa-solid fa-cloud-arrow-up text-green-600"></i>
+                <span>+ Foto After</span>
                 <input type="file" accept="image/*" multiple onchange="handleMultipleImagesSequential(event, 'after', ${id})" class="hidden">
               </label>
             </div>
+
           </div>
         </div>
       `;
@@ -444,7 +467,7 @@
       imgWrapper.draggable = true;
       imgWrapper.setAttribute('data-type', type);
       imgWrapper.setAttribute('data-item-id', itemId);
-      imgWrapper.className = "img-wrapper relative group h-full w-full bg-gray-50 rounded-lg border overflow-hidden shadow-xs flex items-center justify-center p-1 border-gray-200 cursor-grab active:cursor-grabbing touch-none";
+      imgWrapper.className = "img-wrapper relative group h-full w-full bg-white rounded-lg border overflow-hidden shadow-xs hover:shadow-md transition flex items-center justify-center p-1 border-gray-200 cursor-grab active:cursor-grabbing touch-none";
 
       /* Standard Desktop HTML5 Drag Event Listeners */
       imgWrapper.ondragstart = function(e) {
@@ -548,8 +571,8 @@
       };
 
       imgWrapper.innerHTML = `
-        <img src="${imgSrc}" class="max-w-full max-h-full object-contain rounded pointer-events-none">
-        <button onclick="removeImage('${imgId}', '${type}', ${itemId})" type="button" class="no-print absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow opacity-80 group-hover:opacity-100 transition">
+        <img src="${imgSrc}" class="max-w-full max-h-full object-contain rounded pointer-events-none transition group-hover:scale-[1.02]">
+        <button onclick="removeImage('${imgId}', '${type}', ${itemId})" type="button" title="Hapus foto ini" class="no-print absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow opacity-90 group-hover:opacity-100 transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
       `;
@@ -572,13 +595,13 @@
 
       if (remaining === 0) {
         if (placeholder) placeholder.style.display = 'block';
-        grid.className = "grid grid-cols-1 gap-2 min-h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+        grid.className = "grid grid-cols-1 gap-2 min-h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white";
       } else if (remaining === 1) {
-        grid.className = "grid grid-cols-1 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
-      } else if (remaining === 2) {
-        grid.className = "grid grid-cols-2 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+        if (placeholder) placeholder.style.display = 'none';
+        grid.className = "grid grid-cols-1 gap-2 h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white";
       } else {
-        grid.className = "grid grid-cols-2 gap-2 h-[320px] flex items-center justify-center border border-dashed border-gray-200 rounded-lg p-2 bg-white";
+        if (placeholder) placeholder.style.display = 'none';
+        grid.className = "grid grid-cols-2 gap-2 h-[300px] flex items-center justify-center border border-slate-700 rounded-lg p-2 bg-slate-900 text-white";
       }
     }
 
@@ -682,46 +705,39 @@
       addItem('', '');
     };
 
-    async function exportToPDF() {
-      syncInputsForPrint();
-      const btnPdf = document.getElementById('btn-pdf');
-      btnPdf.disabled = true;
-      btnPdf.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Memproses PDF...`;
+    /* Helper untuk mengonversi Base64 / Data URL menjadi JPEG terkompresi */
+    function getCompressedBase64(imgSrc, maxWidth = 800, quality = 0.7) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.src = imgSrc;
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
 
-      try {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const itemPages = document.querySelectorAll('.item-page');
-
-        for (let i = 0; i < itemPages.length; i++) {
-          const itemEl = itemPages[i];
-
-          const canvas = await html2canvas(itemEl, {
-            scale: 1.5,
-            useCORS: true,
-            logging: false
-          });
-
-          const imgData = canvas.toDataURL('image/jpeg', 0.8);
-          const pdfWidth = 297;
-          const pdfHeight = 210;
-
-          if (i > 0) {
-            pdf.addPage();
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
           }
 
-          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-        }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
 
-        const titleVal = document.getElementById('rep-title').value || 'Before_After_Report';
-        const fileName = titleVal.replace(/\s+/g, '_') + '.pdf';
-        pdf.save(fileName);
-      } catch (err) {
-        alert('Gagal mengekspor PDF: ' + err.message);
-      } finally {
-        btnPdf.disabled = false;
-        btnPdf.innerHTML = `<i class="fa-solid fa-file-pdf text-sm"></i> Download PDF`;
-      }
+          // Mengambil Base64 bersih (tanpa prefix data:image/jpeg;base64,)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          const base64Data = compressedDataUrl.split(',')[1];
+          resolve(base64Data);
+        };
+        img.onerror = () => {
+          const base64Data = imgSrc.includes(',') ? imgSrc.split(',')[1] : imgSrc;
+          resolve(base64Data);
+        };
+      });
     }
 
     async function exportToExcel() {
@@ -826,9 +842,10 @@
             // Foto Before (Col 4 -> index 3.05)
             if (beforeImgs[pIdx]) {
               try {
+                const compressedBase64 = await getCompressedBase64(beforeImgs[pIdx].src, 800, 0.7);
                 const imageId = workbook.addImage({
-                  base64: beforeImgs[pIdx].src,
-                  extension: 'png',
+                  base64: compressedBase64,
+                  extension: 'jpeg',
                 });
                 worksheet.addImage(imageId, {
                   tl: { col: 3.05, row: (currentRow - 1) + 0.05 },
@@ -843,9 +860,10 @@
             // Foto Action (Col 5 -> index 4.05)
             if (actionImgs[pIdx]) {
               try {
+                const compressedBase64 = await getCompressedBase64(actionImgs[pIdx].src, 800, 0.7);
                 const imageId = workbook.addImage({
-                  base64: actionImgs[pIdx].src,
-                  extension: 'png',
+                  base64: compressedBase64,
+                  extension: 'jpeg',
                 });
                 worksheet.addImage(imageId, {
                   tl: { col: 4.05, row: (currentRow - 1) + 0.05 },
@@ -860,9 +878,10 @@
             // Foto After (Col 6 -> index 5.05)
             if (afterImgs[pIdx]) {
               try {
+                const compressedBase64 = await getCompressedBase64(afterImgs[pIdx].src, 800, 0.7);
                 const imageId = workbook.addImage({
-                  base64: afterImgs[pIdx].src,
-                  extension: 'png',
+                  base64: compressedBase64,
+                  extension: 'jpeg',
                 });
                 worksheet.addImage(imageId, {
                   tl: { col: 5.05, row: (currentRow - 1) + 0.05 },
@@ -887,7 +906,12 @@
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const fileName = (document.getElementById('rep-title').value || 'Before_After_Report').replace(/\s+/g, '_') + '.xlsx';
+        
+        // Membersihkan nama file: spasi dipertahankan, karakter ilegal diganti dengan spasi (bukan underscore)
+        const titleValRaw = document.getElementById('rep-title').value.trim();
+        const cleanedTitle = titleValRaw ? titleValRaw.replace(/[/\\?%*:|"<>]/g, ' ') : 'Before After Report';
+        const fileName = cleanedTitle + '.xlsx';
+
         saveAs(blob, fileName);
 
       } catch (err) {
@@ -900,3 +924,4 @@
   </script>
 </body>
 </html>
+```eof
